@@ -123,6 +123,7 @@ pub enum Dialog {
     BookmarksFromTextStyles,
     /// Set Page Boxes (crop, trim, bleed, art, media).
     PageBoxes,
+    CropPages,
     /// Add / Update Header and Footer, Watermark, Background.
     Marks(pdfcraft_engine::MarkKind),
     /// Export a PDF ▸ Image / Text.

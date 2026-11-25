@@ -416,7 +416,7 @@ fn tool_input(
         crate::camera_ui::page_input(resp, &xf, ptr, i, view, can_modify, press);
     }
     if tool == QuickTool::Crop
-        && crate::crop::page_input(ui, crate::crop::CropPageInput { resp, xf: &xf, ptr, page: i, info, view, allowed: can_crop, free })
+        && crate::crop::page_input(ui, crate::crop::CropPageInput { resp, xf: &xf, ptr, page: i, view, allowed: can_crop, free })
     {
         view.current = i;
         frame.out.open_boxes = true;

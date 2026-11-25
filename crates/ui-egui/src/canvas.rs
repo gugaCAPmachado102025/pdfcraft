@@ -763,6 +763,8 @@ pub struct DocView {
     marks_waiting: Option<(QuickTool, Selection)>,
     /// A crop rectangle being dragged (Crop tool).
     pub crop_drag: crate::crop::CropDrag,
+    /// The crop rectangle just drawn, until the app takes it.
+    pub crop_done: Option<crate::crop::CropDone>,
     /// Enhance ▸ Camera image: the quadrilateral being placed.
     pub camera: Option<crate::camera_ui::CameraQuad>,
     /// Enhance ▸ Camera image: the page just enhanced, while the bar offers rotate, crop and
@@ -1204,6 +1206,7 @@ impl DocView {
             marks_across_pages: None,
             marks_waiting: None,
             crop_drag: None,
+            crop_done: None,
             camera: None,
             camera_done: None,
             sign: Default::default(),
@@ -3576,7 +3579,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     }
     let form_notice = view.forms.notice.take();
     // One crop, then back to selecting (as Acrobat does).
-    let cropped = view.pending_edit.as_ref().is_some_and(|e| matches!(e, pdfcraft_engine::Edit::SetPageBox { .. }));
+    let cropped = view.crop_done.take();
     let mut tool = app.quick_tool;
     comments::keys(ui.ctx(), keys, view, info, &mut tool, allowed);
     if preparing {
@@ -3628,8 +3631,11 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
         let id = app.views[index].id;
         app.run_link_script(id, page, link);
     }
-    if tool == QuickTool::Crop && cropped {
+    if tool == QuickTool::Crop
+        && let Some(done) = cropped
+    {
         tool = QuickTool::Select;
+        crate::crop::finish(app, index, done);
     }
     let tool = finish_sign_requests(app, index, tool);
     app.quick_tool = tool;

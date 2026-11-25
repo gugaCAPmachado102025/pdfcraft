@@ -1,0 +1,82 @@
+name: Montar Mac
+
+# Cópia do Luiz: testa o recorte e monta o app para Macs com chip da Apple.
+on:
+  push:
+    branches: [recortar-pares]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: macos-15
+    timeout-minutes: 180
+    env:
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - id: i18n
+        run: echo "rev=$(tr -d '[:space:]' < craft-i18n.rev)" >>"$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          repository: storytold/craft-i18n
+          ref: ${{ steps.i18n.outputs.rev }}
+          path: craft-i18n
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: storytold/craft-fonts
+          ref: b076417b5880bd4154bd22f00695b1d28c6bea83
+          path: craft-fonts
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal -c rustfmt -t aarch64-apple-darwin && rustup default stable
+      - run: cargo fmt -p pdfcraft-ui-egui --check
+        continue-on-error: true
+      - name: Testes do recorte
+        run: cargo test --locked -p pdfcraft-ui-egui --test it -- pageboxes viewer:: camera pointer control
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+  mac:
+    runs-on: macos-15
+    timeout-minutes: 180
+    env:
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - id: i18n
+        run: echo "rev=$(tr -d '[:space:]' < craft-i18n.rev)" >>"$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          repository: storytold/craft-i18n
+          ref: ${{ steps.i18n.outputs.rev }}
+          path: craft-i18n
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: storytold/craft-fonts
+          ref: b076417b5880bd4154bd22f00695b1d28c6bea83
+          path: craft-fonts
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal -c rustfmt -t aarch64-apple-darwin && rustup default stable
+      - run: cargo fmt -p pdfcraft-ui-egui --check
+        continue-on-error: true
+      - name: Montar
+        env:
+          CRAFT_I18N_DIR: ${{ github.workspace }}/craft-i18n
+          CRAFT_I18N_REQUIRED: "1"
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+          PDFCRAFT_BUILD_LABEL: recorte
+        run: |
+          packaging/macos/package.sh --arch aarch64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdfcraft-mac
+          path: dist/release/*.dmg
+          if-no-files-found: error

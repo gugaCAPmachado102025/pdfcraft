@@ -58,6 +58,7 @@ struct Pending {
     link_command: Option<&'static str>,
     protect_now: bool,
     boxes_now: bool,
+    crop_now: bool,
     printer_marks_now: bool,
     colours_now: bool,
     fix_hairlines_now: bool,
@@ -485,6 +486,12 @@ fn dialog_body(ui: &mut egui::Ui, app: &mut PdfCraftApp, dialog: Dialog, req: &m
             req.apply = go;
             req.boxes_now = req.apply;
             req.close = req.apply || cancel;
+            return false;
+        }
+        Dialog::CropPages => {
+            let (go, cancel) = crate::crop::body(ui, app, &t);
+            req.crop_now = go;
+            req.close = go || cancel;
             return false;
         }
         Dialog::Protect => {
@@ -2172,6 +2179,9 @@ fn finish_edits(app: &mut PdfCraftApp, dialog: Dialog, req: &mut Pending) {
         let count = app.session.get(id).map(|d| d.info.pages.len()).unwrap_or(0);
         let edit = crate::marks_ui::edit(&app.marks_draft, kind, count);
         app.apply_edit(edit);
+    }
+    if req.crop_now {
+        crate::crop::apply(app);
     }
     if req.boxes_now
         && let Some((i, id)) = app.active_ids()

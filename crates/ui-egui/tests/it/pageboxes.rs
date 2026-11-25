@@ -108,6 +108,9 @@ fn crop_middle_half(h: &mut Harness<'static, PdfCraftApp>) {
     }
     h.drop_at(b);
     h.run_steps(4);
+    assert_eq!(h.state().dialog, Some(Dialog::CropPages));
+    h.get_by_label("OK").click();
+    h.run_steps(4);
     let (w, hh) = size(h, 0);
     assert!((w - 150.0).abs() < 2.0 && (hh - 200.0).abs() < 2.0, "{w}×{hh}");
     assert_eq!(size(h, 1), (300.0, 400.0));
@@ -173,7 +176,70 @@ fn the_crop_tool_leaves_the_page_grid_so_a_page_can_be_cropped() {
     }
     h.drop_at(b);
     h.run_steps(4);
+    assert_eq!(h.state().dialog, Some(Dialog::CropPages));
+    h.get_by_label("OK").click();
+    h.run_steps(4);
     let (w, hh) = size(&h, 0);
     assert!((w - 150.0).abs() < 2.0 && (hh - 200.0).abs() < 2.0, "{w}×{hh}");
     assert_eq!(size(&h, 1), (300.0, 400.0));
+}
+
+/// The rectangle drawn on page 1 goes to the even, the odd or all the pages, in one undo step.
+#[test]
+fn a_drawn_crop_is_applied_to_the_chosen_pages() {
+    let whole = (300.0, 400.0);
+    let half = (150.0, 200.0);
+    for (option, sizes) in [("Even pages", [whole, half]), ("Odd pages", [half, whole]), ("All pages", [half, half])] {
+        let mut h = harness();
+        assert!(h.state_mut().execute("page.crop"));
+        h.run_steps(2);
+        let r = h.state().views[0].page_screen_rect(0).unwrap();
+        let (a, b) = (r.min + r.size() * 0.25, r.min + r.size() * 0.75);
+        h.hover_at(a);
+        h.run_steps(1);
+        h.drag_at(a);
+        h.run_steps(1);
+        for k in 1..=4 {
+            h.hover_at(a + (b - a) * (k as f32 / 4.0));
+            h.run_steps(1);
+        }
+        h.drop_at(b);
+        h.run_steps(4);
+        assert_eq!([size(&h, 0), size(&h, 1)], [whole; 2], "nothing is cropped before OK");
+        h.get_by_label(option).click();
+        h.run_steps(2);
+        h.get_by_label("OK").click();
+        h.run_steps(4);
+        for (p, want) in sizes.into_iter().enumerate() {
+            let got = size(&h, p);
+            assert!((got.0 - want.0).abs() < 2.0 && (got.1 - want.1).abs() < 2.0, "{option}, page {}: {got:?}", p + 1);
+        }
+        assert!(h.state_mut().execute("edit.undo"));
+        h.run_steps(4);
+        assert_eq!([size(&h, 0), size(&h, 1)], [whole; 2], "one undo restores every page");
+    }
+}
+
+/// Cancel crops nothing.
+#[test]
+fn cancelling_crop_pages_leaves_the_pages_alone() {
+    let mut h = harness();
+    assert!(h.state_mut().execute("page.crop"));
+    h.run_steps(2);
+    let r = h.state().views[0].page_screen_rect(0).unwrap();
+    let (a, b) = (r.min + r.size() * 0.25, r.min + r.size() * 0.75);
+    h.hover_at(a);
+    h.run_steps(1);
+    h.drag_at(a);
+    h.run_steps(1);
+    h.hover_at(a + (b - a) * 0.5);
+    h.run_steps(1);
+    h.hover_at(b);
+    h.run_steps(1);
+    h.drop_at(b);
+    h.run_steps(4);
+    h.get_by_label("Cancel").click();
+    h.run_steps(4);
+    assert_eq!(h.state().dialog, None);
+    assert_eq!([size(&h, 0), size(&h, 1)], [(300.0, 400.0); 2]);
 }
