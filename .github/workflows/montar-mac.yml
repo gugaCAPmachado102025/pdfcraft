@@ -37,7 +37,7 @@ jobs:
       - run: cargo fmt -p pdfcraft-ui-egui --check
         continue-on-error: true
       - name: Testes do recorte
-        run: cargo test --locked -p pdfcraft-ui-egui --test it -- pageboxes viewer:: camera pointer control
+        run: cargo test --locked -p pdfcraft-ui-egui --test it -- pageboxes viewer camera pointer control
         env:
           CARGO_PROFILE_DEV_DEBUG: "0"
   mac:
