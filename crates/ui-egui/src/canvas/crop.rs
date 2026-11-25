@@ -6,10 +6,10 @@ use pdfcraft_engine::{BoxSpec, DocId, Edit, PageBox, PageOrientation, PageParity
 use pdfcraft_render::DocInfo;
 
 use crate::canvas::{DocView, PageXform};
-use crate::theme::{self, Tokens};
-use crate::{PdfCraftApp, widgets};
 use crate::page_cursor::Layer;
 use crate::page_pointer::PagePointer;
+use crate::theme::{self, Tokens};
+use crate::{PdfCraftApp, widgets};
 
 /// A crop rectangle being dragged: (page, start on screen).
 pub type CropDrag = Option<(usize, Pos2)>;
